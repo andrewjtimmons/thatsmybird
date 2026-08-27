@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>That's My Bird (shitty prototype)</title>
+<style>
+  body { font: 16px/1.4 system-ui, sans-serif; max-width: 640px; margin: 24px auto; padding: 0 16px; }
+  h1 { font-size: 20px; }
+  input { font: inherit; padding: 4px 6px; }
+  button { font: inherit; padding: 8px 12px; cursor: pointer; margin: 2px 0; }
+  #choices button { display: block; width: 100%; text-align: left; margin: 6px 0; }
+  #choices button.right { background: #cde6cd; }
+  #choices button.wrong { background: #f0c8c8; }
+  img#photo { width: 100%; max-height: 360px; object-fit: cover; background: #eee; }
+  .muted { color: #666; font-size: 14px; }
+  .row { margin: 10px 0; }
+  #status { min-height: 1.2em; color: #a00; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<h1>That's My Bird <span class="muted">— shitty prototype</span></h1>
+
+<section id="setup">
+  <div class="row">
+    <label>eBird API token
+      <input id="token" size="30" placeholder="get one at ebird.org/api/keygen">
+    </label>
+  </div>
+  <div class="row">
+    <label>lat <input id="lat" size="10" placeholder="42.45"></label>
+    <label>lng <input id="lng" size="10" placeholder="-76.48"></label>
+    <button id="locBtn" type="button">use my location</button>
+  </div>
+  <div class="row"><button id="startBtn" type="button">Start</button></div>
+  <p class="muted">Uses eBird for nearby species, Macaulay Library for media,
+     iNaturalist as fallback. All hacky. All unofficial.</p>
+</section>
+
+<section id="game" class="hidden">
+  <div class="row"><strong id="score">0 / 0</strong>
+    <span class="muted" id="poolInfo"></span></div>
+  <img id="photo" alt="mystery bird">
+  <div class="row"><audio id="audio" controls></audio></div>
+  <div id="choices"></div>
+  <div class="row">
+    <button id="nextBtn" type="button" class="hidden">Next bird</button>
+    <span class="muted" id="mediaSrc"></span>
+  </div>
+</section>
+
+<div id="status"></div>
+
+<script src="config.local.js" onerror="void 0"></script>
+<script>
+const $ = s => document.querySelector(s);
+const status = m => { $('#status').textContent = m || ''; };
+const rand = n => Math.floor(Math.random() * n);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const sampleN = (a, n) => shuffle([...a]).slice(0, n);
+
+const state = { token: '', species: [], correct: 0, total: 0 };
+
+// ---- restore token: config.local.js > localStorage > empty ----
+const cfgToken = (window.EBIRD_TOKEN && window.EBIRD_TOKEN !== 'paste-your-ebird-api-token-here')
+  ? window.EBIRD_TOKEN : '';
+$('#token').value = cfgToken || localStorage.getItem('ebirdToken') || '';
+
+$('#locBtn').onclick = () => {
+  status('getting location…');
+  navigator.geolocation.getCurrentPosition(
+    p => { $('#lat').value = p.coords.latitude.toFixed(4);
+           $('#lng').value = p.coords.longitude.toFixed(4); status(''); },
+    e => status('location failed: ' + e.message)
+  );
+};
+
+$('#startBtn').onclick = async () => {
+  const token = $('#token').value.trim();
+  const lat = parseFloat($('#lat').value), lng = parseFloat($('#lng').value);
+  if (!token) return status('need an eBird API token');
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return status('need lat and lng');
+  localStorage.setItem('ebirdToken', token);
+  state.token = token;
+  status('loading nearby birds…');
+  try {
+    state.species = await localSpecies(token, lat, lng);
+  } catch (e) { return status('eBird failed: ' + e.message); }
+  if (state.species.length < 4) return status('only found ' + state.species.length + ' species nearby — try a different spot');
+  $('#setup').classList.add('hidden');
+  $('#game').classList.remove('hidden');
+  $('#poolInfo').textContent = '(' + state.species.length + ' species in pool)';
+  nextRound();
+};
+
+$('#nextBtn').onclick = nextRound;
+
+// ---- eBird: nearby species ----
+async function localSpecies(token, lat, lng) {
+  const url = `https://api.ebird.org/v2/data/obs/geo/recent?lat=${lat}&lng=${lng}&back=30&maxResults=200&includeProvisional=true`;
+  const r = await fetch(url, { headers: { 'X-eBirdApiToken': token } });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const data = await r.json();
+  const seen = new Map();
+  for (const o of data) if (!seen.has(o.speciesCode))
+    seen.set(o.speciesCode, { code: o.speciesCode, com: o.comName, sci: o.sciName });
+  return [...seen.values()];
+}
+
+// ---- Macaulay Library (unofficial) ----
+async function macaulayAssets(taxonCode, mediaType) {
+  const url = `https://search.macaulaylibrary.org/api/v2/search?taxonCode=${taxonCode}&mediaType=${mediaType}&count=15&sort=rating_rank_desc`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('ML HTTP ' + r.status);
+  const data = await r.json();
+  const arr = data?.results?.content || data?.content || (Array.isArray(data) ? data : []);
+  return arr.map(x => x.assetId || x.catalogId || x.mlAssetId || x.id).filter(Boolean);
+}
+const mlPhoto = id => `https://cdn.download.ams.birds.cornell.edu/api/v2/asset/${id}/1200`;
+const mlAudio = id => `https://cdn.download.ams.birds.cornell.edu/api/v2/asset/${id}/audio`;
+
+// ---- iNaturalist fallback ----
+async function inat(sci, kind /* 'photos' | 'sounds' */) {
+  const q = kind === 'sounds'
+    ? `sounds=true&photos=false`
+    : `photos=true`;
+  const url = `https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(sci)}&${q}&quality_grade=research&per_page=30&order_by=votes&order=desc`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('iNat HTTP ' + r.status);
+  const { results = [] } = await r.json();
+  for (const o of shuffle(results)) {
+    if (kind === 'sounds' && o.sounds?.length) return o.sounds[0].file_url;
+    if (kind === 'photos' && o.photos?.length) return o.photos[0].url.replace('square', 'large');
+  }
+  return null;
+}
+
+async function getMedia(sp) {
+  let photo = null, audio = null, src = 'Macaulay';
+  try {
+    const p = await macaulayAssets(sp.code, 'photo');
+    if (p.length) photo = mlPhoto(p[rand(p.length)]);
+    const a = await macaulayAssets(sp.code, 'audio');
+    if (a.length) audio = mlAudio(a[rand(a.length)]);
+  } catch (e) { /* fall through */ }
+  if (!photo) { photo = await inat(sp.sci, 'photos').catch(() => null); if (photo) src = 'iNaturalist'; }
+  if (!audio) { audio = await inat(sp.sci, 'sounds').catch(() => null); if (!photo || src === 'iNaturalist') src = 'iNaturalist'; }
+  return { photo, audio, src };
+}
+
+// ---- rounds ----
+async function nextRound() {
+  $('#nextBtn').classList.add('hidden');
+  $('#choices').innerHTML = '';
+  $('#mediaSrc').textContent = '';
+  $('#photo').src = '';
+  $('#audio').src = '';
+  status('loading a bird…');
+
+  let round = null;
+  for (let attempt = 0; attempt < 4 && !round; attempt++) {
+    const four = sampleN(state.species, 4);
+    const answer = four[rand(4)];
+    const media = await getMedia(answer);
+    if (media.photo || media.audio) round = { four, answer, media };
+  }
+  if (!round) return status('could not find media for anything — try restarting');
+
+  status('');
+  $('#photo').src = round.media.photo || '';
+  $('#audio').src = round.media.audio || '';
+  $('#mediaSrc').textContent = 'media: ' + round.media.src +
+    (round.media.photo ? '' : ' (no photo)') + (round.media.audio ? '' : ' (no audio)');
+
+  for (const sp of shuffle([...round.four])) {
+    const b = document.createElement('button');
+    b.textContent = sp.com;
+    b.onclick = () => answerPicked(b, sp, round.answer);
+    $('#choices').appendChild(b);
+  }
+}
+
+function answerPicked(btn, picked, answer) {
+  [...$('#choices').children].forEach(b => b.disabled = true);
+  state.total++;
+  if (picked.code === answer.code) { state.correct++; btn.classList.add('right'); }
+  else {
+    btn.classList.add('wrong');
+    [...$('#choices').children].find(b => b.textContent === answer.com)?.classList.add('right');
+  }
+  $('#score').textContent = state.correct + ' / ' + state.total;
+  $('#nextBtn').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
