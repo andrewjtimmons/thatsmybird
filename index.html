@@ -3,64 +3,238 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>That's My Bird (shitty prototype)</title>
+<title>That's My Bird</title>
 <style>
-  body { font: 16px/1.4 system-ui, sans-serif; max-width: 640px; margin: 24px auto; padding: 0 16px; }
-  h1 { font-size: 20px; }
-  input { font: inherit; padding: 4px 6px; }
-  button { font: inherit; padding: 8px 12px; cursor: pointer; margin: 2px 0; }
-  #choices button { display: block; width: 100%; text-align: left; margin: 6px 0; }
-  #choices button.right { background: #cde6cd; }
-  #choices button.wrong { background: #f0c8c8; }
-  img#photo { width: 100%; max-height: 360px; object-fit: cover; background: #eee; }
-  .muted { color: #666; font-size: 14px; }
-  .row { margin: 10px 0; }
-  #status { min-height: 1.2em; color: #a00; }
-  .hidden { display: none; }
+  :root {
+    --bg: #0a0e17;
+    --card: rgba(255, 255, 255, 0.045);
+    --card-brd: rgba(255, 255, 255, 0.09);
+    --ink: #eef2f7;
+    --muted: #97a3b6;
+    --accent: #10b981;
+    --accent-2: #34d399;
+    --bad: #f43f5e;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font: 16px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    background-image:
+      radial-gradient(60rem 60rem at 15% -10%, rgba(16, 185, 129, 0.16), transparent 60%),
+      radial-gradient(50rem 50rem at 110% 10%, rgba(56, 189, 248, 0.12), transparent 55%);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 24px 18px 64px; animation: fade .45s ease both; }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes pop { from { opacity: 0; transform: translateY(7px); } }
+  @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; } }
+
+  /* header */
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .brand { font-weight: 700; letter-spacing: -0.02em; font-size: 18px; }
+  .brand span { color: var(--accent-2); }
+  .score {
+    font-variant-numeric: tabular-nums; font-weight: 650; font-size: 14px;
+    padding: 6px 12px; border-radius: 999px;
+    background: rgba(16, 185, 129, 0.14); color: var(--accent-2);
+    border: 1px solid rgba(16, 185, 129, 0.28);
+  }
+
+  /* generic card */
+  .card {
+    background: var(--card); border: 1px solid var(--card-brd);
+    border-radius: var(--radius); backdrop-filter: blur(12px);
+  }
+
+  /* setup */
+  #setup { padding: 28px 22px; text-align: center; }
+  #setup h1 { font-size: 26px; letter-spacing: -0.03em; margin-bottom: 6px; }
+  #setup p.sub { color: var(--muted); font-size: 14px; margin-bottom: 22px; }
+  .field { text-align: left; margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
+  input {
+    width: 100%; font: inherit; color: var(--ink);
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-brd);
+    border-radius: 10px; padding: 11px 13px; outline: none;
+    transition: border-color .15s, background .15s;
+  }
+  input:focus { border-color: var(--accent); background: rgba(16, 185, 129, 0.07); }
+  .latlng { display: flex; gap: 10px; }
+  .latlng .field { flex: 1; }
+  button { font: inherit; cursor: pointer; border: 0; color: var(--ink); }
+  .btn-primary {
+    width: 100%; margin-top: 10px; padding: 13px; border-radius: 12px; font-weight: 650;
+    background: linear-gradient(135deg, var(--accent), #059669); color: #05130d;
+    transition: transform .12s, box-shadow .2s;
+    box-shadow: 0 8px 24px -8px rgba(16, 185, 129, 0.6);
+  }
+  .btn-primary:active { transform: translateY(1px); }
+  .btn-ghost {
+    margin-top: 8px; padding: 9px 14px; border-radius: 10px; font-size: 13px; color: var(--muted);
+    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--card-brd);
+  }
+  .btn-ghost:hover { color: var(--ink); }
+
+  /* game */
+  #game { display: none; }
+  #game.on { display: block; animation: rise .35s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+
+  .stage { position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 3; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--card-brd); }
+  .stage img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 1; transition: opacity .45s ease; }
+  .stage.loading img { opacity: 0; }
+  .stage.loading::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.06) 45%, transparent 70%);
+    background-size: 200% 100%; animation: shimmer 1.2s infinite;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .spinner {
+    position: absolute; top: 50%; left: 50%; width: 26px; height: 26px; margin: -13px;
+    border: 2px solid rgba(255, 255, 255, 0.2); border-top-color: var(--accent-2);
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  .stage:not(.loading) .spinner { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
+  .pill {
+    font-size: 12px; color: var(--muted); padding: 4px 10px; border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-brd);
+  }
+
+  /* audio player */
+  .player { display: flex; align-items: center; gap: 12px; margin: 14px 0 20px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-brd); }
+  .player.empty { display: none; }
+  .play {
+    flex: none; width: 40px; height: 40px; border-radius: 50%;
+    background: var(--accent); color: #05130d; display: grid; place-items: center;
+    transition: transform .12s;
+  }
+  .play:active { transform: scale(0.92); }
+  .play svg { width: 16px; height: 16px; fill: currentColor; }
+  .play .ic-pause { display: none; }
+  .player.playing .play .ic-play { display: none; }
+  .player.playing .play .ic-pause { display: block; }
+  .track { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); cursor: pointer; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 3px; }
+  .time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
+
+  /* choices */
+  .choices { display: grid; gap: 10px; }
+  .choice {
+    text-align: left; padding: 15px 16px; border-radius: 14px; font-weight: 550;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-brd);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    transition: transform .12s, background .15s, border-color .15s, opacity .2s;
+    animation: pop .3s ease both;
+  }
+  .choice:hover:not(:disabled) { background: rgba(255, 255, 255, 0.09); transform: translateY(-1px); }
+  .choice .mark { font-size: 15px; opacity: 0; }
+  .choice.right { background: rgba(16, 185, 129, 0.16); border-color: var(--accent); }
+  .choice.right .mark { opacity: 1; color: var(--accent-2); }
+  .choice.wrong { background: rgba(244, 63, 94, 0.15); border-color: var(--bad); }
+  .choice.wrong .mark { opacity: 1; color: var(--bad); }
+  .choice:disabled { cursor: default; }
+  .choices.answered .choice:not(.right):not(.wrong) { opacity: 0.4; }
+
+  /* learn */
+  #learn { margin-top: 18px; display: grid; gap: 10px; }
+  #learn:empty { margin: 0; }
+  .learn-item { padding: 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--card-brd); font-size: 14px; }
+  .learn-item.right { border-color: rgba(16, 185, 129, 0.5); background: rgba(16, 185, 129, 0.08); }
+  .learn-item h3 { font-size: 14px; font-weight: 650; margin-bottom: 2px; }
+  .learn-item h3 em { color: var(--muted); font-weight: 400; font-style: italic; }
+  .learn-item.right h3 { color: var(--accent-2); }
+  .learn-item p { color: var(--muted); line-height: 1.55; }
+  .learn-item .more { color: var(--accent-2); cursor: pointer; font-weight: 600; }
+  .learn-loading { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .learn-loading .spinner { position: static; margin: 0; width: 16px; height: 16px; }
+
+  .footer-row { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+  #nextBtn { display: none; }
+  #nextBtn.on { display: block; }
+  .src-note { font-size: 12px; color: var(--muted); }
+
+  #status { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); max-width: 90%; padding: 10px 16px; border-radius: 10px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); color: #fecdd3; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #status.show { opacity: 1; }
 </style>
 </head>
 <body>
-<h1>That's My Bird <span class="muted">— shitty prototype</span></h1>
+<div class="wrap">
+  <header>
+    <div class="brand">That's My <span>Bird</span></div>
+    <div class="score" id="score">0 / 0</div>
+  </header>
 
-<section id="setup">
-  <div class="row">
-    <label>eBird API token
-      <input id="token" size="30" placeholder="get one at ebird.org/api/keygen">
-    </label>
-  </div>
-  <div class="row">
-    <label>lat <input id="lat" size="10" placeholder="42.45"></label>
-    <label>lng <input id="lng" size="10" placeholder="-76.48"></label>
-    <button id="locBtn" type="button">use my location</button>
-  </div>
-  <div class="row"><button id="startBtn" type="button">Start</button></div>
-  <p class="muted">Uses eBird for nearby species, Macaulay Library for media,
-     iNaturalist as fallback. All hacky. All unofficial.</p>
-</section>
+  <section id="setup" class="card">
+    <h1>Name that bird</h1>
+    <p class="sub">Photos &amp; calls of birds seen near you. Four guesses. Go.</p>
+    <div class="field">
+      <label for="token">eBird API token</label>
+      <input id="token" placeholder="ebird.org/api/keygen" autocomplete="off">
+    </div>
+    <div class="latlng">
+      <div class="field"><label for="lat">Latitude</label><input id="lat" placeholder="42.45" inputmode="decimal"></div>
+      <div class="field"><label for="lng">Longitude</label><input id="lng" placeholder="-76.48" inputmode="decimal"></div>
+    </div>
+    <button class="btn-ghost" id="locBtn" type="button">Use my location</button>
+    <button class="btn-primary" id="startBtn" type="button">Start</button>
+  </section>
 
-<section id="game" class="hidden">
-  <div class="row"><strong id="score">0 / 0</strong>
-    <span class="muted" id="poolInfo"></span></div>
-  <img id="photo" alt="mystery bird">
-  <div class="row"><audio id="audio" controls></audio></div>
-  <div id="choices"></div>
-  <div class="row">
-    <button id="nextBtn" type="button" class="hidden">Next bird</button>
-    <span class="muted" id="mediaSrc"></span>
-  </div>
-</section>
+  <section id="game">
+    <div class="stage" id="stage">
+      <div class="spinner"></div>
+      <img id="photo" alt="mystery bird">
+    </div>
+    <div class="meta" id="caption"></div>
+
+    <div class="player empty" id="player">
+      <button class="play" id="playBtn" type="button" aria-label="Play call">
+        <svg class="ic-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <svg class="ic-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+      </button>
+      <div class="track" id="track"><div class="fill" id="fill"></div></div>
+      <span class="time" id="time">0:00</span>
+    </div>
+    <audio id="audio" preload="metadata"></audio>
+
+    <div class="choices" id="choices"></div>
+    <div id="learn"></div>
+
+    <div class="footer-row">
+      <button class="btn-primary" id="nextBtn" type="button" style="width:auto;padding:11px 20px;margin:0">Next bird</button>
+      <span class="src-note" id="mediaSrc"></span>
+    </div>
+  </section>
+</div>
 
 <div id="status"></div>
 
 <script src="config.local.js" onerror="void 0"></script>
 <script>
 const $ = s => document.querySelector(s);
-const status = m => { $('#status').textContent = m || ''; };
 const rand = n => Math.floor(Math.random() * n);
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const sampleN = (a, n) => shuffle([...a]).slice(0, n);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const stripHtml = s => String(s).replace(/<[^>]*>/g, '');
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+let statusTimer;
+const status = m => {
+  const el = $('#status');
+  el.textContent = m || '';
+  el.classList.toggle('show', !!m);
+  clearTimeout(statusTimer);
+  if (m) statusTimer = setTimeout(() => el.classList.remove('show'), 5000);
+};
 
 const state = { token: '', species: [], correct: 0, total: 0 };
+const wikiCache = new Map(); // speciesCode -> plain-text blurb
 
 // ---- restore token: config.local.js > localStorage > empty ----
 const cfgToken = (window.EBIRD_TOKEN && window.EBIRD_TOKEN !== 'paste-your-ebird-api-token-here')
@@ -68,29 +242,27 @@ const cfgToken = (window.EBIRD_TOKEN && window.EBIRD_TOKEN !== 'paste-your-ebird
 $('#token').value = cfgToken || localStorage.getItem('ebirdToken') || '';
 
 $('#locBtn').onclick = () => {
-  status('getting location…');
+  status('Getting location…');
   navigator.geolocation.getCurrentPosition(
-    p => { $('#lat').value = p.coords.latitude.toFixed(4);
-           $('#lng').value = p.coords.longitude.toFixed(4); status(''); },
-    e => status('location failed: ' + e.message)
+    p => { $('#lat').value = p.coords.latitude.toFixed(4); $('#lng').value = p.coords.longitude.toFixed(4); status(''); },
+    e => status('Location failed: ' + e.message)
   );
 };
 
 $('#startBtn').onclick = async () => {
   const token = $('#token').value.trim();
   const lat = parseFloat($('#lat').value), lng = parseFloat($('#lng').value);
-  if (!token) return status('need an eBird API token');
-  if (Number.isNaN(lat) || Number.isNaN(lng)) return status('need lat and lng');
+  if (!token) return status('Need an eBird API token');
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return status('Need latitude and longitude');
   localStorage.setItem('ebirdToken', token);
   state.token = token;
-  status('loading nearby birds…');
+  $('#startBtn').textContent = 'Loading…';
   try {
     state.species = await localSpecies(token, lat, lng);
-  } catch (e) { return status('eBird failed: ' + e.message); }
-  if (state.species.length < 4) return status('only found ' + state.species.length + ' species nearby — try a different spot');
-  $('#setup').classList.add('hidden');
-  $('#game').classList.remove('hidden');
-  $('#poolInfo').textContent = '(' + state.species.length + ' species in pool)';
+  } catch (e) { $('#startBtn').textContent = 'Start'; return status('eBird failed: ' + e.message); }
+  if (state.species.length < 4) { $('#startBtn').textContent = 'Start'; return status('Only ' + state.species.length + ' species nearby — try elsewhere'); }
+  $('#setup').style.display = 'none';
+  $('#game').classList.add('on');
   nextRound();
 };
 
@@ -109,29 +281,52 @@ async function localSpecies(token, lat, lng) {
 }
 
 // ---- Macaulay Library (unofficial) ----
+const assetId = a => a.assetId || a.catalogId || a.mlAssetId || a.id;
+const mlPhoto = id => `https://cdn.download.ams.birds.cornell.edu/api/v2/asset/${id}/1200`;
+const mlAudio = id => `https://cdn.download.ams.birds.cornell.edu/api/v2/asset/${id}/audio`;
+
 async function macaulayAssets(taxonCode, mediaType) {
   const url = `https://search.macaulaylibrary.org/api/v2/search?taxonCode=${taxonCode}&mediaType=${mediaType}&count=15&sort=rating_rank_desc`;
   const r = await fetch(url);
   if (!r.ok) throw new Error('ML HTTP ' + r.status);
   const data = await r.json();
   const arr = data?.results?.content || data?.content || (Array.isArray(data) ? data : []);
-  return arr.map(x => x.assetId || x.catalogId || x.mlAssetId || x.id).filter(Boolean);
+  return arr.filter(assetId);
 }
-const mlPhoto = id => `https://cdn.download.ams.birds.cornell.edu/api/v2/asset/${id}/1200`;
-const mlAudio = id => `https://cdn.download.ams.birds.cornell.edu/api/v2/asset/${id}/audio`;
 
-// ---- iNaturalist fallback ----
-async function inat(sci, kind /* 'photos' | 'sounds' */) {
-  const q = kind === 'sounds'
-    ? `sounds=true&photos=false`
-    : `photos=true`;
+// pull caption fields straight out of the asset JSON — no inference, no name fields
+function mlCaption(a) {
+  const c = {};
+  const ageSex = [a.age, a.sex].filter(Boolean).join(' ');
+  if (ageSex) c.ageSex = ageSex;
+  const beh = Array.isArray(a.behaviors) ? a.behaviors.join(', ') : a.behaviors;
+  if (beh) c.behavior = beh;
+  if (a.location) c.place = a.location;
+  let when = '';
+  if (a.obsYear && a.obsMonth) when = MONTHS[a.obsMonth - 1] + ' ' + a.obsYear;
+  else if (a.obsDttm) { const d = new Date(a.obsDttm); if (!isNaN(d)) when = MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+  if (when) c.when = when;
+  if (a.userDisplayName) c.by = a.userDisplayName;
+  return c;
+}
+
+// ---- iNaturalist fallback (media + caption) ----
+async function inatMedia(sci, kind /* 'photos' | 'sounds' */) {
+  const q = kind === 'sounds' ? 'sounds=true&photos=false' : 'photos=true';
   const url = `https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(sci)}&${q}&quality_grade=research&per_page=30&order_by=votes&order=desc`;
   const r = await fetch(url);
   if (!r.ok) throw new Error('iNat HTTP ' + r.status);
   const { results = [] } = await r.json();
   for (const o of shuffle(results)) {
-    if (kind === 'sounds' && o.sounds?.length) return o.sounds[0].file_url;
-    if (kind === 'photos' && o.photos?.length) return o.photos[0].url.replace('square', 'large');
+    let url2 = null;
+    if (kind === 'sounds' && o.sounds?.length) url2 = o.sounds[0].file_url;
+    if (kind === 'photos' && o.photos?.length) url2 = o.photos[0].url.replace('square', 'large');
+    if (!url2) continue;
+    const meta = {};
+    if (o.place_guess) meta.place = o.place_guess;
+    if (o.observed_on) { const d = new Date(o.observed_on); if (!isNaN(d)) meta.when = MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+    if (o.user?.login) meta.by = o.user.login + ' (iNaturalist)';
+    return { url: url2, meta };
   }
   return null;
 }
@@ -139,24 +334,83 @@ async function inat(sci, kind /* 'photos' | 'sounds' */) {
 async function getMedia(sp) {
   let photo = null, audio = null, src = 'Macaulay';
   try {
-    const p = await macaulayAssets(sp.code, 'photo');
-    if (p.length) photo = mlPhoto(p[rand(p.length)]);
-    const a = await macaulayAssets(sp.code, 'audio');
-    if (a.length) audio = mlAudio(a[rand(a.length)]);
-  } catch (e) { /* fall through */ }
-  if (!photo) { photo = await inat(sp.sci, 'photos').catch(() => null); if (photo) src = 'iNaturalist'; }
-  if (!audio) { audio = await inat(sp.sci, 'sounds').catch(() => null); if (!photo || src === 'iNaturalist') src = 'iNaturalist'; }
+    const ps = await macaulayAssets(sp.code, 'photo');
+    if (ps.length) { const a = ps[rand(Math.min(ps.length, 8))]; photo = { url: mlPhoto(assetId(a)), meta: mlCaption(a) }; }
+    const as = await macaulayAssets(sp.code, 'audio');
+    if (as.length) { const a = as[rand(Math.min(as.length, 8))]; audio = { url: mlAudio(assetId(a)), meta: mlCaption(a) }; }
+  } catch (e) { /* fall through to iNat */ }
+  if (!photo) { const m = await inatMedia(sp.sci, 'photos').catch(() => null); if (m) { photo = m; src = 'iNaturalist'; } }
+  if (!audio) { const m = await inatMedia(sp.sci, 'sounds').catch(() => null); if (m) { audio = m; if (!photo) src = 'iNaturalist'; } }
   return { photo, audio, src };
 }
 
+// ---- Wikipedia blurb per species ----
+// Cache holds the in-flight promise, so prefetch + later render share one request.
+const wikiDone = new Set(); // species codes whose blurb has resolved
+function wikiBlurb(sp) {
+  if (wikiCache.has(sp.code)) return wikiCache.get(sp.code);
+  const job = (async () => {
+    let text = '';
+    try {
+      const r = await fetch(`https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(sp.sci)}&rank=species&per_page=1`);
+      if (r.ok) { const { results = [] } = await r.json(); text = results[0]?.wikipedia_summary || ''; }
+    } catch (e) { /* try next */ }
+    for (const title of [sp.com, sp.sci]) {
+      if (text) break;
+      try {
+        const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
+        if (r.ok) { const d = await r.json(); if (d.type !== 'disambiguation') text = d.extract || ''; }
+      } catch (e) { /* try next */ }
+    }
+    return stripHtml(text).replace(/\s+/g, ' ').trim();
+  })();
+  job.then(() => wikiDone.add(sp.code), () => wikiDone.add(sp.code));
+  wikiCache.set(sp.code, job);
+  return job;
+}
+// warm the cache for all 4 the moment a round is known
+const prefetchBlurbs = four => four.forEach(sp => wikiBlurb(sp).catch(() => {}));
+
+// short preview: up to ~220 chars, cut at the last sentence end or word break
+function preview(t, limit = 220) {
+  if (t.length <= limit) return t;
+  const head = t.slice(0, limit);
+  const dot = head.lastIndexOf('. ');
+  if (dot > limit * 0.5) return head.slice(0, dot + 1);
+  const sp = head.lastIndexOf(' ');
+  return (sp > 0 ? head.slice(0, sp) : head) + '…';
+}
+
+// ---- audio player ----
+const audio = $('#audio'), player = $('#player');
+const fmt = s => isFinite(s) && s > 0 ? Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0') : '0:00';
+$('#playBtn').onclick = () => { audio.paused ? audio.play() : audio.pause(); };
+audio.onplay = () => player.classList.add('playing');
+audio.onpause = () => player.classList.remove('playing');
+audio.onended = () => { player.classList.remove('playing'); $('#fill').style.width = '0%'; };
+audio.ontimeupdate = () => {
+  $('#fill').style.width = (audio.currentTime / (audio.duration || 1) * 100) + '%';
+  $('#time').textContent = fmt(audio.duration - audio.currentTime);
+};
+audio.onloadedmetadata = () => { $('#time').textContent = fmt(audio.duration); };
+$('#track').onclick = e => {
+  if (!audio.duration) return;
+  const r = e.currentTarget.getBoundingClientRect();
+  audio.currentTime = (e.clientX - r.left) / r.width * audio.duration;
+};
+
 // ---- rounds ----
 async function nextRound() {
-  $('#nextBtn').classList.add('hidden');
+  $('#nextBtn').classList.remove('on');
   $('#choices').innerHTML = '';
+  $('#choices').classList.remove('answered');
+  $('#learn').innerHTML = '';
+  $('#caption').innerHTML = '';
   $('#mediaSrc').textContent = '';
-  $('#photo').src = '';
-  $('#audio').src = '';
-  status('loading a bird…');
+  $('#stage').classList.add('loading');
+  $('#photo').removeAttribute('src');
+  audio.pause(); audio.removeAttribute('src'); $('#fill').style.width = '0%'; $('#time').textContent = '0:00';
+  player.classList.add('empty');
 
   let round = null;
   for (let attempt = 0; attempt < 4 && !round; attempt++) {
@@ -165,32 +419,83 @@ async function nextRound() {
     const media = await getMedia(answer);
     if (media.photo || media.audio) round = { four, answer, media };
   }
-  if (!round) return status('could not find media for anything — try restarting');
+  if (!round) { $('#stage').classList.remove('loading'); return status('Could not load media — try Next again'); }
 
-  status('');
-  $('#photo').src = round.media.photo || '';
-  $('#audio').src = round.media.audio || '';
-  $('#mediaSrc').textContent = 'media: ' + round.media.src +
-    (round.media.photo ? '' : ' (no photo)') + (round.media.audio ? '' : ' (no audio)');
+  prefetchBlurbs(round.four); // fire now so descriptions are ready when they answer
 
-  for (const sp of shuffle([...round.four])) {
+  if (round.media.photo) $('#photo').src = round.media.photo.url;
+  $('#photo').onload = () => $('#stage').classList.remove('loading');
+  if (!round.media.photo) $('#stage').classList.remove('loading');
+
+  if (round.media.audio) { audio.src = round.media.audio.url; player.classList.remove('empty'); }
+  $('#mediaSrc').textContent = 'via ' + round.media.src;
+  renderCaption(round.media.photo?.meta || round.media.audio?.meta);
+
+  shuffle([...round.four]).forEach((sp, i) => {
     const b = document.createElement('button');
-    b.textContent = sp.com;
-    b.onclick = () => answerPicked(b, sp, round.answer);
+    b.className = 'choice';
+    b.type = 'button';
+    b.style.animationDelay = (i * 55) + 'ms';
+    b.innerHTML = `<span>${esc(sp.com)}</span><span class="mark">●</span>`;
+    b.onclick = () => answerPicked(b, sp, round);
     $('#choices').appendChild(b);
-  }
+  });
 }
 
-function answerPicked(btn, picked, answer) {
-  [...$('#choices').children].forEach(b => b.disabled = true);
+function renderCaption(meta) {
+  const el = $('#caption');
+  if (!meta) { el.innerHTML = ''; return; }
+  const bits = [meta.ageSex, meta.behavior, meta.place, meta.when, meta.by && ('by ' + meta.by)]
+    .filter(Boolean).map(x => `<span class="pill">${esc(x)}</span>`);
+  el.innerHTML = bits.join('');
+}
+
+function answerPicked(btn, picked, round) {
+  const answer = round.answer;
+  const boxes = [...$('#choices').children];
+  boxes.forEach(b => b.disabled = true);
+  $('#choices').classList.add('answered');
   state.total++;
-  if (picked.code === answer.code) { state.correct++; btn.classList.add('right'); }
-  else {
+  if (picked.code === answer.code) {
+    state.correct++;
+    btn.classList.add('right');
+    btn.querySelector('.mark').textContent = '✓';
+  } else {
     btn.classList.add('wrong');
-    [...$('#choices').children].find(b => b.textContent === answer.com)?.classList.add('right');
+    btn.querySelector('.mark').textContent = '✕';
+    const rb = boxes.find(b => b.textContent.includes(answer.com));
+    if (rb) { rb.classList.add('right'); rb.querySelector('.mark').textContent = '✓'; }
   }
   $('#score').textContent = state.correct + ' / ' + state.total;
-  $('#nextBtn').classList.remove('hidden');
+  $('#nextBtn').classList.add('on');
+  showLearn(round.four, answer);
+}
+
+async function showLearn(four, answer) {
+  const box = $('#learn');
+  const ordered = [answer, ...four.filter(s => s.code !== answer.code)];
+  // blurbs were prefetched at round start; only show a spinner if they're not ready yet
+  if (!ordered.every(s => wikiDone.has(s.code)))
+    box.innerHTML = '<div class="learn-loading"><span class="spinner"></span>Reading up on these four…</div>';
+  const blurbs = await Promise.all(ordered.map(wikiBlurb));
+  box.innerHTML = '';
+  ordered.forEach((sp, i) => {
+    const full = blurbs[i] || 'No description available.';
+    let short = preview(full);
+    const rest = full.slice(short.replace(/…$/, '').length).trim();
+    const hasMore = rest && rest !== short;
+    if (hasMore) short = short.replace(/…$/, '').trim();
+    const div = document.createElement('div');
+    div.className = 'learn-item' + (sp.code === answer.code ? ' right' : '');
+    div.style.animationDelay = (i * 55) + 'ms';
+    div.innerHTML = `<h3>${esc(sp.com)} <em>${esc(sp.sci)}</em></h3>` +
+      `<p><span class="blurb">${esc(short)}${hasMore ? ' ' : ''}</span>` +
+      (hasMore ? `<span class="more">more</span><span class="rest" hidden> ${esc(rest)}</span>` : '') +
+      `</p>`;
+    const more = div.querySelector('.more');
+    if (more) more.onclick = () => { div.querySelector('.rest').hidden = false; more.remove(); };
+    box.appendChild(div);
+  });
 }
 </script>
 </body>
