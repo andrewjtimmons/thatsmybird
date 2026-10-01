@@ -153,6 +153,7 @@
   .learn-item h3 em { color: var(--muted); font-weight: 400; font-style: italic; }
   .learn-item.right h3 { color: var(--accent-2); }
   .learn-item p { color: var(--muted); line-height: 1.55; }
+  .learn-item .wiki { font-size: 12px; font-weight: 500; color: var(--accent-2); margin-left: 2px; }
   .learn-item .more { color: var(--accent-2); cursor: pointer; font-weight: 600; }
   .learn-loading { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 8px; }
   .learn-loading .spinner { position: static; margin: 0; width: 16px; height: 16px; }
@@ -476,19 +477,21 @@ const wikiDone = new Set(); // species codes whose blurb has resolved
 function wikiBlurb(sp) {
   if (wikiCache.has(sp.code)) return wikiCache.get(sp.code);
   const job = (async () => {
-    let text = '';
+    let text = '', url = '';
     try {
       const r = await fetch(`https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(sp.sci)}&rank=species&per_page=1`);
-      if (r.ok) { const { results = [] } = await r.json(); text = results[0]?.wikipedia_summary || ''; }
+      if (r.ok) { const { results = [] } = await r.json(); text = results[0]?.wikipedia_summary || ''; url = results[0]?.wikipedia_url || ''; }
     } catch (e) { /* try next */ }
     for (const title of [sp.com, sp.sci]) {
       if (text) break;
       try {
         const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
-        if (r.ok) { const d = await r.json(); if (d.type !== 'disambiguation') text = d.extract || ''; }
+        if (r.ok) { const d = await r.json(); if (d.type !== 'disambiguation') { text = d.extract || ''; url = d.content_urls?.desktop?.page || url; } }
       } catch (e) { /* try next */ }
     }
-    return stripHtml(text).replace(/\s+/g, ' ').trim();
+    text = stripHtml(text).replace(/\s+/g, ' ').trim();
+    url = url.replace(/^http:/, 'https:') || `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(sp.sci)}`;
+    return { text, url };
   })();
   job.then(() => wikiDone.add(sp.code), () => wikiDone.add(sp.code));
   wikiCache.set(sp.code, job);
@@ -627,7 +630,8 @@ async function showLearn(four, answer) {
   const blurbs = await Promise.all(ordered.map(wikiBlurb));
   box.innerHTML = '';
   ordered.forEach((sp, i) => {
-    const full = blurbs[i] || 'No description available.';
+    const full = blurbs[i]?.text || 'No description available.';
+    const wiki = blurbs[i]?.url || `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(sp.sci)}`;
     let short = preview(full);
     const rest = full.slice(short.replace(/…$/, '').length).trim();
     const hasMore = rest && rest !== short;
@@ -635,7 +639,7 @@ async function showLearn(four, answer) {
     const div = document.createElement('div');
     div.className = 'learn-item' + (sp.code === answer.code ? ' right' : '');
     div.style.animationDelay = (i * 55) + 'ms';
-    div.innerHTML = `<h3>${esc(sp.com)} <em>${esc(sp.sci)}</em></h3>` +
+    div.innerHTML = `<h3>${esc(sp.com)} <em>${esc(sp.sci)}</em> <a class="wiki" href="${esc(wiki)}" target="_blank" rel="noopener">Wikipedia</a></h3>` +
       `<p><span class="blurb">${esc(short)}${hasMore ? ' ' : ''}</span>` +
       (hasMore ? `<span class="more">more</span><span class="rest" hidden> ${esc(rest)}</span>` : '') +
       `</p>`;
