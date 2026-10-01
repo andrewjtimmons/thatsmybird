@@ -170,6 +170,8 @@
     background: var(--card); border: 1px solid var(--card-brd);
   }
   .tip-pill:hover { color: var(--muted); }
+  .tip-pill.nudge { background: var(--accent); border-color: var(--accent); color: #fff; }
+  input.missing { border-color: var(--bad); background: #fdf1f1; box-shadow: 0 0 0 3px rgba(211, 63, 63, 0.15); }
   .tip {
     position: absolute; right: 0; top: calc(100% + 8px); z-index: 5; width: 280px;
     padding: 12px 14px; font-size: 12px; line-height: 1.5; color: var(--muted); text-align: left;
@@ -214,7 +216,7 @@
   </header>
 
   <section id="setup" class="card">
-    <p class="sub">A game for learning to identify birds near you using photos and sound</p>
+    <p class="sub">A game for learning to identify birds near you<br>using photos and sound</p>
     <div class="field">
       <div class="label-row">
         <label for="token">eBird API token</label>
@@ -230,7 +232,7 @@
           </span>
         </span>
       </div>
-      <input id="token" placeholder="ebird.org/api/keygen" autocomplete="off">
+      <input id="token" placeholder="e.g. a64ue283-5c1f-4b9e-9d2a-7f3e8b6c1d40" autocomplete="off">
     </div>
     <details class="loc" id="loc">
       <summary>Location: <span id="locNote">Finding your location…</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></summary>
@@ -307,6 +309,7 @@ const wikiCache = new Map(); // speciesCode -> plain-text blurb
 const cfgToken = (window.EBIRD_TOKEN && window.EBIRD_TOKEN !== 'paste-your-ebird-api-token-here')
   ? window.EBIRD_TOKEN : '';
 $('#token').value = cfgToken || localStorage.getItem('ebirdToken') || '';
+$('#token').addEventListener('input', () => { $('#token').classList.remove('missing'); $('.tip-pill').classList.remove('nudge'); });
 
 // ---- location: auto-fill from IP on load; typing overrides ----
 const setLoc = (lat, lng, note) => {
@@ -348,7 +351,10 @@ ipLocate();
 $('#startBtn').onclick = async () => {
   const token = $('#token').value.trim();
   const lat = parseFloat($('#lat').value), lng = parseFloat($('#lng').value);
-  if (!token) return status('Need an eBird API token');
+  if (!token) { // flag the empty box and point at the help pill
+    $('#token').classList.add('missing'); $('.tip-pill').classList.add('nudge'); $('#token').focus();
+    return;
+  }
   if (Number.isNaN(lat) || Number.isNaN(lng)) { $('#loc').open = true; return status('Need latitude and longitude'); }
   localStorage.setItem('ebirdToken', token);
   state.token = token;
