@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>That's My Bird</title>
+<title>That's My Bird!</title>
 <style>
   :root {
     --bg: #f5f9f6;
@@ -15,7 +15,7 @@
     --accent-2: #17603c;
     --accent-soft: #e4f2ea;
     --navy: #12382a;
-    --bad: #5c7065;
+    --bad: #d33f3f;
     --surface: #f7fbf8;
     --radius: 16px;
   }
@@ -35,9 +35,8 @@
   @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; } }
 
   /* header */
-  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  header { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
   .brand { color: #fff; font-weight: 700; letter-spacing: -0.02em; font-size: 18px; }
-  .brand span { color: #9fd8b5; }
   .score {
     font-variant-numeric: tabular-nums; font-weight: 650; font-size: 14px;
     padding: 6px 12px; border-radius: 999px;
@@ -56,17 +55,26 @@
   #setup h1 { font-size: 26px; letter-spacing: -0.03em; margin-bottom: 6px; }
   #setup p.sub { color: var(--muted); font-size: 14px; margin-bottom: 22px; }
   .field { text-align: left; margin-bottom: 12px; }
-  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .field label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 5px; } /* matches the intro line (p.sub) */
   input {
-    width: 100%; font: inherit; color: var(--ink);
+    width: 100%; font: inherit; font-size: 14px; color: var(--ink);
     background: var(--surface); border: 1px solid var(--card-brd);
-    border-radius: 10px; padding: 11px 13px; outline: none;
+    border-radius: 8px; padding: 4px 10px; line-height: 1.3; outline: none;
     transition: border-color .15s, background .15s;
   }
   input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px var(--accent-soft); }
   .latlng { display: flex; gap: 10px; }
   .latlng .field { flex: 1; }
-  .loc-note { font-size: 13px; color: var(--muted); margin: 2px 0 4px; }
+  .latlng input { width: 50%; } /* half-width boxes: lat at the left edge, long starting at the middle */
+  /* location: one summary line; the arrow opens lat/lng for editing */
+  .loc { text-align: left; margin-bottom: 12px; }
+  .loc summary { list-style: none; cursor: pointer; font-size: 14px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+  .loc summary::-webkit-details-marker { display: none; }
+  .loc summary #locNote { color: var(--ink); }
+  .loc .chev { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; transform: rotate(-90deg); } /* > when closed */
+  .loc[open] .chev { transform: none; } /* v when open */
+  .loc .latlng { margin-top: 8px; }
+  .loc .field { margin-bottom: 0; }
   button { font: inherit; cursor: pointer; border: 0; color: var(--ink); }
   .btn-primary {
     width: 100%; margin-top: 10px; padding: 13px; border-radius: 12px; font-weight: 650;
@@ -74,6 +82,7 @@
     transition: transform .12s, background .15s;
   }
   .btn-primary:hover { background: var(--accent-2); }
+  #startBtn { width: auto; min-width: 33%; padding: 11px 32px; } /* centered by #setup's text-align */
   .btn-primary:active { transform: translateY(1px); }
 
   /* game */
@@ -151,6 +160,28 @@
   .footer-row { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
   #nextBtn { display: none; }
   #nextBtn.on { display: block; }
+  /* token help: same pill + hover panel pattern as credits, opening downward */
+  .label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+  .label-row label { margin-bottom: 0; }
+  .tip-wrap { position: relative; }
+  .tip-pill {
+    display: inline-flex; align-items: center; line-height: 1;
+    font-size: 11px; font-weight: 400; color: #8fa197; padding: 5px 10px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--card-brd);
+  }
+  .tip-pill:hover { color: var(--muted); }
+  .tip {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 5; width: 280px;
+    padding: 12px 14px; font-size: 12px; line-height: 1.5; color: var(--muted); text-align: left;
+    background: var(--card); border: 1px solid var(--card-brd); border-radius: 12px;
+    box-shadow: 0 10px 30px -12px rgba(18, 56, 42, 0.35);
+    opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity .15s, transform .15s, visibility .15s;
+  }
+  .tip ol { margin: 6px 0 0 18px; display: grid; gap: 3px; }
+  .tip a { color: var(--accent-2); }
+  .tip::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 10px; } /* hover bridge */
+  .tip-wrap:hover .tip, .tip-wrap:focus-within .tip { opacity: 1; visibility: visible; transform: none; }
+
   /* credits: small pill; panel opens on hover, or on tap/keyboard focus */
   .credits-wrap { position: relative; display: flex; justify-content: flex-end; margin-top: auto; padding-top: 28px; }
   .credits-pill {
@@ -178,21 +209,36 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="brand">That's My <span>Bird</span></div>
+    <div class="brand">That's My Bird!</div>
     <div class="score" id="score" hidden>0 / 0</div><!-- hidden for now; still updated every answer -->
   </header>
 
   <section id="setup" class="card">
-    <p class="sub">A game for learning to identify birds near you using photos and sound.</p>
+    <p class="sub">A game for learning to identify birds near you using photos and sound</p>
     <div class="field">
-      <label for="token">eBird API token</label>
+      <div class="label-row">
+        <label for="token">eBird API token</label>
+        <span class="tip-wrap">
+          <button class="tip-pill" type="button" aria-describedby="tokenHelp">Need a token?</button>
+          <span class="tip" id="tokenHelp" role="tooltip">
+            It's free and takes about a minute:
+            <ol>
+              <li><a href="https://ebird.org/home" target="_blank" rel="noopener">Sign in</a> to (or <a href="https://secure.birds.cornell.edu/identity/account/create?service=https%3A%2F%2Febird.org%2Flogin%2Fcas%3Fportal%3Debird&amp;locale=en_US" target="_blank" rel="noopener">create</a>) a free eBird account.</li>
+              <li>Go to <a href="https://ebird.org/api/keygen" target="_blank" rel="noopener">ebird.org/api/keygen</a> and fill in the short form.</li>
+              <li>Copy the key it shows you and paste it here.</li>
+            </ol>
+          </span>
+        </span>
+      </div>
       <input id="token" placeholder="ebird.org/api/keygen" autocomplete="off">
     </div>
-    <div class="latlng">
-      <div class="field"><label for="lat">Latitude</label><input id="lat" placeholder="42.45" inputmode="decimal"></div>
-      <div class="field"><label for="lng">Longitude</label><input id="lng" placeholder="-76.48" inputmode="decimal"></div>
-    </div>
-    <p class="loc-note" id="locNote">Finding your location…</p>
+    <details class="loc" id="loc">
+      <summary>Location: <span id="locNote">Finding your location…</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></summary>
+      <div class="latlng">
+        <div class="field"><label for="lat">Latitude</label><input id="lat" placeholder="42.45" inputmode="decimal"></div>
+        <div class="field"><label for="lng">Longitude</label><input id="lng" placeholder="-76.48" inputmode="decimal"></div>
+      </div>
+    </details>
     <button class="btn-primary" id="startBtn" type="button">Start</button>
   </section>
 
@@ -272,10 +318,10 @@ async function ipLocate() {
     const g = await fetch('https://get.geojs.io/v1/ip/geo.json').then(r => r.json());
     if ($('#lat').value || $('#lng').value) return; // user already typed something — don't clobber it
     const place = [g.city, g.region].filter(Boolean).join(', ') || 'your area';
-    setLoc(g.latitude, g.longitude, `Near ${place} (approximate, from your internet connection)`);
+    setLoc(g.latitude, g.longitude, `Near ${place}`);
     warmUp();
   } catch {
-    $('#locNote').textContent = 'Couldn\'t detect your location — type lat/lng';
+    $('#locNote').textContent = 'not found — set it here'; $('#loc').open = true;
   }
 }
 // Fetch species + the first round while they're still on the landing page, so Start is near-instant.
@@ -294,7 +340,7 @@ function warmUp() {
 }
 ipLocate();
 ['#lat', '#lng'].forEach(id => {
-  $(id).addEventListener('input', () => { $('#locNote').textContent = 'Custom location'; });
+  $(id).addEventListener('input', () => { $('#locNote').textContent = 'Custom'; });
   $(id).addEventListener('change', warmUp); // re-warm for the typed spot once they leave the field
 });
 
@@ -303,7 +349,7 @@ $('#startBtn').onclick = async () => {
   const token = $('#token').value.trim();
   const lat = parseFloat($('#lat').value), lng = parseFloat($('#lng').value);
   if (!token) return status('Need an eBird API token');
-  if (Number.isNaN(lat) || Number.isNaN(lng)) return status('Need latitude and longitude');
+  if (Number.isNaN(lat) || Number.isNaN(lng)) { $('#loc').open = true; return status('Need latitude and longitude'); }
   localStorage.setItem('ebirdToken', token);
   state.token = token;
   state.lat = lat; state.lng = lng;
