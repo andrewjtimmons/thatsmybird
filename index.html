@@ -111,6 +111,7 @@
   /* audio player */
   .player { display: flex; align-items: center; gap: 12px; margin: 14px 0 20px; padding: 10px 12px; border-radius: 14px; background: #fff; border: 1px solid var(--card-brd); }
   .player.empty { display: none; }
+  .player.empty ~ .choices { margin-top: 20px; } /* no audio: keep a gap between photo and choices */
   .play {
     flex: none; width: 40px; height: 40px; border-radius: 50%;
     background: var(--accent); color: #fff; display: grid; place-items: center;
