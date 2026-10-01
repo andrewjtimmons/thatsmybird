@@ -93,18 +93,14 @@
   .stage { position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 3; background: var(--accent-soft); border: 1px solid var(--card-brd); }
   .stage img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 1; transition: opacity .45s ease; }
   .stage.loading img { opacity: 0; }
-  .stage.loading::after {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.7) 45%, transparent 70%);
-    background-size: 200% 100%; animation: shimmer 1.2s infinite;
-  }
-  @keyframes shimmer { to { background-position: -200% 0; } }
   .spinner {
     position: absolute; top: 50%; left: 50%; width: 26px; height: 26px; margin: -13px;
     border: 2px solid var(--card-brd); border-top-color: var(--accent);
     border-radius: 50%; animation: spin .7s linear infinite;
   }
   .stage:not(.loading) .spinner { display: none; }
+  .stage-msg { position: absolute; left: 16px; right: 16px; top: calc(50% + 24px); text-align: center; font-size: 13px; color: var(--muted); }
+  .stage:not(.loading) .stage-msg { display: none; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
 
@@ -249,6 +245,7 @@
   <section id="game">
     <div class="stage" id="stage">
       <div class="spinner"></div>
+      <div class="stage-msg" id="stageMsg"></div>
       <img id="photo" alt="mystery bird">
     </div>
 
@@ -305,6 +302,7 @@ const status = m => {
 };
 
 const state = { token: '', species: [], correct: 0, total: 0, upcoming: null };
+const say = t => { $('#stageMsg').textContent = t; }; // loading-screen progress line
 const wikiCache = new Map(); // speciesCode -> plain-text blurb
 
 // ---- restore token: config.local.js > localStorage > empty ----
@@ -373,6 +371,7 @@ $('#startBtn').onclick = async () => {
   };
   const reuse = warm?.key === `${token}|${lat}|${lng}`;
   if (!reuse) state.upcoming = null; // anything prefetched was for a different spot
+  say('Finding birds seen near you on eBird…');
   try {
     state.species = await (reuse ? warm.species : localSpecies(token, lat, lng));
   } catch (e) { return backToSetup('eBird failed: ' + e.message); }
@@ -458,8 +457,10 @@ async function inatNear(sci, kind) {
   return close || wider;
 }
 
-async function getMedia(sp) {
+async function getMedia(sp, say = () => {}) {
+  say('Finding a photo and audio recorded near you on iNaturalist…');
   let [photo, audio] = await Promise.all([inatNear(sp.sci, 'photos'), inatNear(sp.sci, 'sounds')]);
+  if (!photo || !audio) say('Checking the Macaulay Library…');
   let src = photo ? 'iNaturalist' : 'Macaulay';
   if (!photo || !audio) try {
     const ps = photo ? [] : await macaulayAssets(sp.code, 'photo');
@@ -467,6 +468,7 @@ async function getMedia(sp) {
     const as = audio ? [] : await macaulayAssets(sp.code, 'audio');
     if (as.length) { const a = as[rand(Math.min(as.length, 8))]; audio = { url: mlAudio(assetId(a)), meta: mlCaption(a) }; }
   } catch (e) { /* fall through to iNat */ }
+  if (!photo || !audio) say('Looking further afield on iNaturalist…');
   if (!photo) { const m = await inatMedia(sp.sci, 'photos').catch(() => null); if (m) { photo = m; src = 'iNaturalist'; } }
   if (!audio) { const m = await inatMedia(sp.sci, 'sounds').catch(() => null); if (m) { audio = m; if (!photo) src = 'iNaturalist'; } }
   return { photo, audio, src };
@@ -533,11 +535,12 @@ $('#track').onclick = e => {
 let roundId = 0; // bumps every round; a slower, older round bails instead of rendering on top
 
 // Pick 4 species + fetch media for the answer. No DOM; used for the current round and to prefetch the next.
-async function buildRound() {
+async function buildRound(say = () => {}) { // say: progress text for the loading screen (no-op when prefetching)
   for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt) say('Nothing found for that bird — trying another…');
     const four = sampleN(state.species, 4);
     const answer = four[rand(4)];
-    const media = await getMedia(answer);
+    const media = await getMedia(answer, say);
     if (media.photo || media.audio) {
       if (media.photo) new Image().src = media.photo.url; // warm the browser cache
       return { four, answer, media };
@@ -563,15 +566,16 @@ async function nextRound() {
   clearStage();
   const prefetched = state.upcoming;
   state.upcoming = null;
+  if (prefetched) say('Getting the next bird ready…');
   let round = prefetched ? await prefetched : null;
-  if (!round) round = await buildRound().catch(() => null); // no prefetch, or it came up empty
+  if (!round) round = await buildRound(say).catch(() => null); // no prefetch, or it came up empty
   if (myRound !== roundId) return;
   state.upcoming = buildRound().catch(() => null); // get the next bird ready while they guess
   if (!round) { $('#stage').classList.remove('loading'); return status('Could not load media — try Next again'); }
 
   prefetchBlurbs(round.four); // fire now so descriptions are ready when they answer
 
-  if (round.media.photo) $('#photo').src = round.media.photo.url;
+  if (round.media.photo) { say('Loading the photo…'); $('#photo').src = round.media.photo.url; }
   $('#photo').onload = () => $('#stage').classList.remove('loading');
   if (!round.media.photo) $('#stage').classList.remove('loading');
 
