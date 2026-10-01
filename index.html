@@ -6,14 +6,17 @@
 <title>That's My Bird</title>
 <style>
   :root {
-    --bg: #0a0e17;
-    --card: rgba(255, 255, 255, 0.045);
-    --card-brd: rgba(255, 255, 255, 0.09);
-    --ink: #eef2f7;
-    --muted: #97a3b6;
-    --accent: #10b981;
-    --accent-2: #34d399;
-    --bad: #f43f5e;
+    --bg: #f5f9f6;
+    --card: #ffffff;
+    --card-brd: #cfe2d6;
+    --ink: #1b2e24;
+    --muted: #5c7065;
+    --accent: #1f7a4d;
+    --accent-2: #17603c;
+    --accent-soft: #e4f2ea;
+    --navy: #12382a;
+    --bad: #5c7065;
+    --surface: #f7fbf8;
     --radius: 16px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,32 +24,31 @@
     font: 16px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: var(--ink);
     background: var(--bg);
-    background-image:
-      radial-gradient(60rem 60rem at 15% -10%, rgba(16, 185, 129, 0.16), transparent 60%),
-      radial-gradient(50rem 50rem at 110% 10%, rgba(56, 189, 248, 0.12), transparent 55%);
+    background-image: linear-gradient(180deg, var(--navy) 0, var(--navy) 64px, transparent 64px);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 520px; margin: 0 auto; padding: 24px 18px 64px; animation: fade .45s ease both; }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 24px 18px 20px; animation: fade .45s ease both;
+          min-height: 100vh; display: flex; flex-direction: column; } /* column so the credits pill sits at the page bottom */
   @keyframes fade { from { opacity: 0; } }
   @keyframes pop { from { opacity: 0; transform: translateY(7px); } }
   @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; } }
 
   /* header */
   header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-  .brand { font-weight: 700; letter-spacing: -0.02em; font-size: 18px; }
-  .brand span { color: var(--accent-2); }
+  .brand { color: #fff; font-weight: 700; letter-spacing: -0.02em; font-size: 18px; }
+  .brand span { color: #9fd8b5; }
   .score {
     font-variant-numeric: tabular-nums; font-weight: 650; font-size: 14px;
     padding: 6px 12px; border-radius: 999px;
-    background: rgba(16, 185, 129, 0.14); color: var(--accent-2);
-    border: 1px solid rgba(16, 185, 129, 0.28);
+    background: rgba(255, 255, 255, 0.12); color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
   }
 
   /* generic card */
   .card {
     background: var(--card); border: 1px solid var(--card-brd);
-    border-radius: var(--radius); backdrop-filter: blur(12px);
+    border-radius: var(--radius); box-shadow: 0 6px 24px -12px rgba(18, 56, 42, 0.25);
   }
 
   /* setup */
@@ -57,61 +59,52 @@
   .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
   input {
     width: 100%; font: inherit; color: var(--ink);
-    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-brd);
+    background: var(--surface); border: 1px solid var(--card-brd);
     border-radius: 10px; padding: 11px 13px; outline: none;
     transition: border-color .15s, background .15s;
   }
-  input:focus { border-color: var(--accent); background: rgba(16, 185, 129, 0.07); }
+  input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px var(--accent-soft); }
   .latlng { display: flex; gap: 10px; }
   .latlng .field { flex: 1; }
+  .loc-note { font-size: 13px; color: var(--muted); margin: 2px 0 4px; }
   button { font: inherit; cursor: pointer; border: 0; color: var(--ink); }
   .btn-primary {
     width: 100%; margin-top: 10px; padding: 13px; border-radius: 12px; font-weight: 650;
-    background: linear-gradient(135deg, var(--accent), #059669); color: #05130d;
-    transition: transform .12s, box-shadow .2s;
-    box-shadow: 0 8px 24px -8px rgba(16, 185, 129, 0.6);
+    background: var(--accent); color: #fff;
+    transition: transform .12s, background .15s;
   }
+  .btn-primary:hover { background: var(--accent-2); }
   .btn-primary:active { transform: translateY(1px); }
-  .btn-ghost {
-    margin-top: 8px; padding: 9px 14px; border-radius: 10px; font-size: 13px; color: var(--muted);
-    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--card-brd);
-  }
-  .btn-ghost:hover { color: var(--ink); }
 
   /* game */
   #game { display: none; }
   #game.on { display: block; animation: rise .35s ease both; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 
-  .stage { position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 3; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--card-brd); }
+  .stage { position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 3; background: var(--accent-soft); border: 1px solid var(--card-brd); }
   .stage img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 1; transition: opacity .45s ease; }
   .stage.loading img { opacity: 0; }
   .stage.loading::after {
     content: ""; position: absolute; inset: 0;
-    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.06) 45%, transparent 70%);
+    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.7) 45%, transparent 70%);
     background-size: 200% 100%; animation: shimmer 1.2s infinite;
   }
   @keyframes shimmer { to { background-position: -200% 0; } }
   .spinner {
     position: absolute; top: 50%; left: 50%; width: 26px; height: 26px; margin: -13px;
-    border: 2px solid rgba(255, 255, 255, 0.2); border-top-color: var(--accent-2);
+    border: 2px solid var(--card-brd); border-top-color: var(--accent);
     border-radius: 50%; animation: spin .7s linear infinite;
   }
   .stage:not(.loading) .spinner { display: none; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
-  .pill {
-    font-size: 12px; color: var(--muted); padding: 4px 10px; border-radius: 999px;
-    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-brd);
-  }
 
   /* audio player */
-  .player { display: flex; align-items: center; gap: 12px; margin: 14px 0 20px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-brd); }
+  .player { display: flex; align-items: center; gap: 12px; margin: 14px 0 20px; padding: 10px 12px; border-radius: 14px; background: #fff; border: 1px solid var(--card-brd); }
   .player.empty { display: none; }
   .play {
     flex: none; width: 40px; height: 40px; border-radius: 50%;
-    background: var(--accent); color: #05130d; display: grid; place-items: center;
+    background: var(--accent); color: #fff; display: grid; place-items: center;
     transition: transform .12s;
   }
   .play:active { transform: scale(0.92); }
@@ -119,24 +112,25 @@
   .play .ic-pause { display: none; }
   .player.playing .play .ic-play { display: none; }
   .player.playing .play .ic-pause { display: block; }
-  .track { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); cursor: pointer; overflow: hidden; }
-  .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 3px; }
+  .track { flex: 1; height: 6px; border-radius: 3px; background: var(--accent-soft); cursor: pointer; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: var(--accent); border-radius: 3px; }
   .time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
 
   /* choices */
-  .choices { display: grid; gap: 10px; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .choice {
     text-align: left; padding: 15px 16px; border-radius: 14px; font-weight: 550;
-    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-brd);
+    background: #fff; border: 1px solid var(--card-brd);
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     transition: transform .12s, background .15s, border-color .15s, opacity .2s;
     animation: pop .3s ease both;
   }
-  .choice:hover:not(:disabled) { background: rgba(255, 255, 255, 0.09); transform: translateY(-1px); }
+  .choice:hover:not(:disabled) { background: var(--accent-soft); border-color: #a8d2b8; transform: translateY(-1px); }
   .choice .mark { font-size: 15px; opacity: 0; }
-  .choice.right { background: rgba(16, 185, 129, 0.16); border-color: var(--accent); }
-  .choice.right .mark { opacity: 1; color: var(--accent-2); }
-  .choice.wrong { background: rgba(244, 63, 94, 0.15); border-color: var(--bad); }
+  .choice.right { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .choice.right .mark { opacity: 1; color: #fff; }
+  .choice.wrong { background: #eef2ef; border-color: #9fb0a6; }
+  .choice.wrong span:first-child { text-decoration: line-through; text-decoration-color: #9fb0a6; }
   .choice.wrong .mark { opacity: 1; color: var(--bad); }
   .choice:disabled { cursor: default; }
   .choices.answered .choice:not(.right):not(.wrong) { opacity: 0.4; }
@@ -144,8 +138,8 @@
   /* learn */
   #learn { margin-top: 18px; display: grid; gap: 10px; }
   #learn:empty { margin: 0; }
-  .learn-item { padding: 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--card-brd); font-size: 14px; }
-  .learn-item.right { border-color: rgba(16, 185, 129, 0.5); background: rgba(16, 185, 129, 0.08); }
+  .learn-item { padding: 14px; border-radius: 12px; background: #fff; border: 1px solid var(--card-brd); font-size: 14px; }
+  .learn-item.right { border-color: #a8d2b8; background: var(--accent-soft); }
   .learn-item h3 { font-size: 14px; font-weight: 650; margin-bottom: 2px; }
   .learn-item h3 em { color: var(--muted); font-weight: 400; font-style: italic; }
   .learn-item.right h3 { color: var(--accent-2); }
@@ -157,9 +151,27 @@
   .footer-row { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
   #nextBtn { display: none; }
   #nextBtn.on { display: block; }
-  .src-note { font-size: 12px; color: var(--muted); }
+  /* credits: small pill; panel opens on hover, or on tap/keyboard focus */
+  .credits-wrap { position: relative; display: flex; justify-content: flex-end; margin-top: auto; padding-top: 28px; }
+  .credits-pill {
+    display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+    font-size: 11px; font-weight: 600; color: #8fa197; padding: 6px 12px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--card-brd);
+  }
+  .credits-pill:hover { color: var(--muted); }
+  .credits {
+    position: absolute; right: 0; bottom: calc(100% + 8px); width: min(360px, 100%);
+    display: grid; gap: 6px; padding: 12px 14px; font-size: 12px; color: var(--muted);
+    background: var(--card); border: 1px solid var(--card-brd); border-radius: 12px;
+    box-shadow: 0 10px 30px -12px rgba(18, 56, 42, 0.35);
+    opacity: 0; visibility: hidden; transform: translateY(4px); transition: opacity .15s, transform .15s, visibility .15s;
+  }
+  .credits::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 10px; } /* bridge the gap so hover survives the move up */
+  .credits-wrap:hover .credits, .credits-wrap:focus-within .credits { opacity: 1; visibility: visible; transform: none; }
+  .credits p:empty { display: none; }
+  .credits a { color: var(--accent-2); }
 
-  #status { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); max-width: 90%; padding: 10px 16px; border-radius: 10px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); color: #fecdd3; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #status { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); max-width: 90%; padding: 10px 16px; border-radius: 10px; background: var(--navy); border: 1px solid var(--navy); color: #fff; box-shadow: 0 8px 24px -10px rgba(18, 56, 42, 0.5); font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
   #status.show { opacity: 1; }
 </style>
 </head>
@@ -167,12 +179,11 @@
 <div class="wrap">
   <header>
     <div class="brand">That's My <span>Bird</span></div>
-    <div class="score" id="score">0 / 0</div>
+    <div class="score" id="score" hidden>0 / 0</div><!-- hidden for now; still updated every answer -->
   </header>
 
   <section id="setup" class="card">
-    <h1>Name that bird</h1>
-    <p class="sub">Photos &amp; calls of birds seen near you. Four guesses. Go.</p>
+    <p class="sub">A game for learning to identify birds near you using photos and sound.</p>
     <div class="field">
       <label for="token">eBird API token</label>
       <input id="token" placeholder="ebird.org/api/keygen" autocomplete="off">
@@ -181,7 +192,7 @@
       <div class="field"><label for="lat">Latitude</label><input id="lat" placeholder="42.45" inputmode="decimal"></div>
       <div class="field"><label for="lng">Longitude</label><input id="lng" placeholder="-76.48" inputmode="decimal"></div>
     </div>
-    <button class="btn-ghost" id="locBtn" type="button">Use my location</button>
+    <p class="loc-note" id="locNote">Finding your location…</p>
     <button class="btn-primary" id="startBtn" type="button">Start</button>
   </section>
 
@@ -190,7 +201,6 @@
       <div class="spinner"></div>
       <img id="photo" alt="mystery bird">
     </div>
-    <div class="meta" id="caption"></div>
 
     <div class="player empty" id="player">
       <button class="play" id="playBtn" type="button" aria-label="Play call">
@@ -207,9 +217,20 @@
 
     <div class="footer-row">
       <button class="btn-primary" id="nextBtn" type="button" style="width:auto;padding:11px 20px;margin:0">Next bird</button>
-      <span class="src-note" id="mediaSrc"></span>
     </div>
   </section>
+
+  <footer class="credits-wrap">
+    <button class="credits-pill" type="button" aria-describedby="credits">Credits</button>
+    <div class="credits" id="credits" role="tooltip">
+    <p>Nearby bird sightings by <a href="https://ebird.org" target="_blank" rel="noopener">eBird</a></p>
+    <p>Photos and audio by <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a></p>
+    <p>Species descriptions by <a href="https://www.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a></p>
+    <p id="creditPhoto"></p>
+    <p id="creditSound"></p>
+    <p>Webpage by <a href="https://github.com/andrewjtimmons" target="_blank" rel="noopener">andrewjtimmons</a></p>
+    </div>
+  </footer>
 </div>
 
 <div id="status"></div>
@@ -233,7 +254,7 @@ const status = m => {
   if (m) statusTimer = setTimeout(() => el.classList.remove('show'), 5000);
 };
 
-const state = { token: '', species: [], correct: 0, total: 0 };
+const state = { token: '', species: [], correct: 0, total: 0, upcoming: null };
 const wikiCache = new Map(); // speciesCode -> plain-text blurb
 
 // ---- restore token: config.local.js > localStorage > empty ----
@@ -241,13 +262,42 @@ const cfgToken = (window.EBIRD_TOKEN && window.EBIRD_TOKEN !== 'paste-your-ebird
   ? window.EBIRD_TOKEN : '';
 $('#token').value = cfgToken || localStorage.getItem('ebirdToken') || '';
 
-$('#locBtn').onclick = () => {
-  status('Getting location…');
-  navigator.geolocation.getCurrentPosition(
-    p => { $('#lat').value = p.coords.latitude.toFixed(4); $('#lng').value = p.coords.longitude.toFixed(4); status(''); },
-    e => status('Location failed: ' + e.message)
-  );
+// ---- location: auto-fill from IP on load; typing overrides ----
+const setLoc = (lat, lng, note) => {
+  $('#lat').value = (+lat).toFixed(4); $('#lng').value = (+lng).toFixed(4);
+  $('#locNote').textContent = note;
 };
+async function ipLocate() {
+  try {
+    const g = await fetch('https://get.geojs.io/v1/ip/geo.json').then(r => r.json());
+    if ($('#lat').value || $('#lng').value) return; // user already typed something — don't clobber it
+    const place = [g.city, g.region].filter(Boolean).join(', ') || 'your area';
+    setLoc(g.latitude, g.longitude, `Near ${place} (approximate, from your internet connection)`);
+    warmUp();
+  } catch {
+    $('#locNote').textContent = 'Couldn\'t detect your location — type lat/lng';
+  }
+}
+// Fetch species + the first round while they're still on the landing page, so Start is near-instant.
+let warm = null; // { key, species: Promise }
+function warmUp() {
+  const token = $('#token').value.trim(), lat = parseFloat($('#lat').value), lng = parseFloat($('#lng').value);
+  if (!token || Number.isNaN(lat) || Number.isNaN(lng)) return;
+  const key = `${token}|${lat}|${lng}`;
+  const species = localSpecies(token, lat, lng);
+  warm = { key, species };
+  species.then(list => {
+    if (warm?.key !== key || state.species.length) return; // location changed, or game already started
+    Object.assign(state, { token, lat, lng, species: list });
+    if (list.length >= 4) state.upcoming = buildRound().catch(() => null);
+  }).catch(() => {});
+}
+ipLocate();
+['#lat', '#lng'].forEach(id => {
+  $(id).addEventListener('input', () => { $('#locNote').textContent = 'Custom location'; });
+  $(id).addEventListener('change', warmUp); // re-warm for the typed spot once they leave the field
+});
+
 
 $('#startBtn').onclick = async () => {
   const token = $('#token').value.trim();
@@ -256,13 +306,23 @@ $('#startBtn').onclick = async () => {
   if (Number.isNaN(lat) || Number.isNaN(lng)) return status('Need latitude and longitude');
   localStorage.setItem('ebirdToken', token);
   state.token = token;
-  $('#startBtn').textContent = 'Loading…';
-  try {
-    state.species = await localSpecies(token, lat, lng);
-  } catch (e) { $('#startBtn').textContent = 'Start'; return status('eBird failed: ' + e.message); }
-  if (state.species.length < 4) { $('#startBtn').textContent = 'Start'; return status('Only ' + state.species.length + ' species nearby — try elsewhere'); }
+  state.lat = lat; state.lng = lng;
+  if ($('#startBtn').disabled) return;
+  $('#startBtn').disabled = true;
+  // jump straight to the game screen; its loading state covers the eBird fetch too
   $('#setup').style.display = 'none';
   $('#game').classList.add('on');
+  clearStage();
+  const backToSetup = msg => {
+    $('#game').classList.remove('on'); $('#setup').style.display = '';
+    $('#startBtn').disabled = false; status(msg);
+  };
+  const reuse = warm?.key === `${token}|${lat}|${lng}`;
+  if (!reuse) state.upcoming = null; // anything prefetched was for a different spot
+  try {
+    state.species = await (reuse ? warm.species : localSpecies(token, lat, lng));
+  } catch (e) { return backToSetup('eBird failed: ' + e.message); }
+  if (state.species.length < 4) return backToSetup('Only ' + state.species.length + ' species nearby — try elsewhere');
   nextRound();
 };
 
@@ -270,7 +330,7 @@ $('#nextBtn').onclick = nextRound;
 
 // ---- eBird: nearby species ----
 async function localSpecies(token, lat, lng) {
-  const url = `https://api.ebird.org/v2/data/obs/geo/recent?lat=${lat}&lng=${lng}&back=30&maxResults=200&includeProvisional=true`;
+  const url = `https://api.ebird.org/v2/data/obs/geo/recent?lat=${lat}&lng=${lng}&back=30&includeProvisional=true`;
   const r = await fetch(url, { headers: { 'X-eBirdApiToken': token } });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   const data = await r.json();
@@ -307,13 +367,16 @@ function mlCaption(a) {
   else if (a.obsDttm) { const d = new Date(a.obsDttm); if (!isNaN(d)) when = MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
   if (when) c.when = when;
   if (a.userDisplayName) c.by = a.userDisplayName;
+  c.link = `https://macaulaylibrary.org/asset/${assetId(a)}`;
+  c.site = 'Macaulay Library';
   return c;
 }
 
 // ---- iNaturalist fallback (media + caption) ----
-async function inatMedia(sci, kind /* 'photos' | 'sounds' */) {
+async function inatMedia(sci, kind /* 'photos' | 'sounds' */, near /* {lat,lng,km} | undefined */) {
   const q = kind === 'sounds' ? 'sounds=true&photos=false' : 'photos=true';
-  const url = `https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(sci)}&${q}&quality_grade=research&per_page=30&order_by=votes&order=desc`;
+  const geo = near ? `&lat=${near.lat}&lng=${near.lng}&radius=${near.km}` : '';
+  const url = `https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(sci)}&${q}&quality_grade=research&per_page=30&order_by=votes&order=desc${geo}`;
   const r = await fetch(url);
   if (!r.ok) throw new Error('iNat HTTP ' + r.status);
   const { results = [] } = await r.json();
@@ -325,18 +388,29 @@ async function inatMedia(sci, kind /* 'photos' | 'sounds' */) {
     const meta = {};
     if (o.place_guess) meta.place = o.place_guess;
     if (o.observed_on) { const d = new Date(o.observed_on); if (!isNaN(d)) meta.when = MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
-    if (o.user?.login) meta.by = o.user.login + ' (iNaturalist)';
+    if (o.user?.login) meta.by = o.user.login;
+    meta.link = o.uri || `https://www.inaturalist.org/observations/${o.id}`;
+    meta.license = (kind === 'sounds' ? o.sounds[0] : o.photos[0]).license_code || null;
+    meta.site = 'iNaturalist';
     return { url: url2, meta };
   }
   return null;
 }
 
+// Prefer media recorded near the player (iNat geo search), so the caption doesn't say "Florida"
+async function inatNear(sci, kind) {
+  const near = km => inatMedia(sci, kind, { lat: state.lat, lng: state.lng, km }).catch(() => null);
+  const [close, wider] = await Promise.all([near(100), near(400)]); // both at once; prefer the closer hit
+  return close || wider;
+}
+
 async function getMedia(sp) {
-  let photo = null, audio = null, src = 'Macaulay';
-  try {
-    const ps = await macaulayAssets(sp.code, 'photo');
-    if (ps.length) { const a = ps[rand(Math.min(ps.length, 8))]; photo = { url: mlPhoto(assetId(a)), meta: mlCaption(a) }; }
-    const as = await macaulayAssets(sp.code, 'audio');
+  let [photo, audio] = await Promise.all([inatNear(sp.sci, 'photos'), inatNear(sp.sci, 'sounds')]);
+  let src = photo ? 'iNaturalist' : 'Macaulay';
+  if (!photo || !audio) try {
+    const ps = photo ? [] : await macaulayAssets(sp.code, 'photo');
+    if (!photo && ps.length) { const a = ps[rand(Math.min(ps.length, 8))]; photo = { url: mlPhoto(assetId(a)), meta: mlCaption(a) }; }
+    const as = audio ? [] : await macaulayAssets(sp.code, 'audio');
     if (as.length) { const a = as[rand(Math.min(as.length, 8))]; audio = { url: mlAudio(assetId(a)), meta: mlCaption(a) }; }
   } catch (e) { /* fall through to iNat */ }
   if (!photo) { const m = await inatMedia(sp.sci, 'photos').catch(() => null); if (m) { photo = m; src = 'iNaturalist'; } }
@@ -400,25 +474,43 @@ $('#track').onclick = e => {
 };
 
 // ---- rounds ----
-async function nextRound() {
+let roundId = 0; // bumps every round; a slower, older round bails instead of rendering on top
+
+// Pick 4 species + fetch media for the answer. No DOM; used for the current round and to prefetch the next.
+async function buildRound() {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const four = sampleN(state.species, 4);
+    const answer = four[rand(4)];
+    const media = await getMedia(answer);
+    if (media.photo || media.audio) {
+      if (media.photo) new Image().src = media.photo.url; // warm the browser cache
+      return { four, answer, media };
+    }
+  }
+  return null;
+}
+
+function clearStage() {
   $('#nextBtn').classList.remove('on');
   $('#choices').innerHTML = '';
   $('#choices').classList.remove('answered');
   $('#learn').innerHTML = '';
-  $('#caption').innerHTML = '';
-  $('#mediaSrc').textContent = '';
+  $('#creditPhoto').innerHTML = $('#creditSound').innerHTML = '';
   $('#stage').classList.add('loading');
   $('#photo').removeAttribute('src');
   audio.pause(); audio.removeAttribute('src'); $('#fill').style.width = '0%'; $('#time').textContent = '0:00';
   player.classList.add('empty');
+}
 
-  let round = null;
-  for (let attempt = 0; attempt < 4 && !round; attempt++) {
-    const four = sampleN(state.species, 4);
-    const answer = four[rand(4)];
-    const media = await getMedia(answer);
-    if (media.photo || media.audio) round = { four, answer, media };
-  }
+async function nextRound() {
+  const myRound = ++roundId;
+  clearStage();
+  const prefetched = state.upcoming;
+  state.upcoming = null;
+  let round = prefetched ? await prefetched : null;
+  if (!round) round = await buildRound().catch(() => null); // no prefetch, or it came up empty
+  if (myRound !== roundId) return;
+  state.upcoming = buildRound().catch(() => null); // get the next bird ready while they guess
   if (!round) { $('#stage').classList.remove('loading'); return status('Could not load media — try Next again'); }
 
   prefetchBlurbs(round.four); // fire now so descriptions are ready when they answer
@@ -428,8 +520,8 @@ async function nextRound() {
   if (!round.media.photo) $('#stage').classList.remove('loading');
 
   if (round.media.audio) { audio.src = round.media.audio.url; player.classList.remove('empty'); }
-  $('#mediaSrc').textContent = 'via ' + round.media.src;
-  renderCaption(round.media.photo?.meta || round.media.audio?.meta);
+  renderCredit('#creditPhoto', 'Photo', round.media.photo?.meta);
+  renderCredit('#creditSound', 'Audio', round.media.audio?.meta);
 
   shuffle([...round.four]).forEach((sp, i) => {
     const b = document.createElement('button');
@@ -442,12 +534,15 @@ async function nextRound() {
   });
 }
 
-function renderCaption(meta) {
-  const el = $('#caption');
+// Footer credit line: "Photo by <name> on <date> in <place> · CC BY-NC · iNaturalist" (missing parts drop out)
+const licenseLabel = code => code ? code.toUpperCase().replace(/^CC-/, 'CC ') : 'all rights reserved';
+function renderCredit(sel, kind, meta) {
+  const el = $(sel);
   if (!meta) { el.innerHTML = ''; return; }
-  const bits = [meta.ageSex, meta.behavior, meta.place, meta.when, meta.by && ('by ' + meta.by)]
-    .filter(Boolean).map(x => `<span class="pill">${esc(x)}</span>`);
-  el.innerHTML = bits.join('');
+  const who = meta.by ? `by ${meta.link ? `<a href="${esc(meta.link)}" target="_blank" rel="noopener">${esc(meta.by)}</a>` : esc(meta.by)}` : '';
+  const text = [who, meta.when && 'on ' + esc(meta.when), meta.place && 'in ' + esc(meta.place)].filter(Boolean).join(' ');
+  const tail = [meta.site === 'iNaturalist' ? licenseLabel(meta.license) : '', meta.site].filter(Boolean).join(' · ');
+  el.innerHTML = `${kind} ${text}${tail ? ' · ' + tail : ''}`;
 }
 
 function answerPicked(btn, picked, round) {
